@@ -15,7 +15,7 @@ super_planner:
   use_fov_cut: false
   print_log: false
   visual_process: false
-  frontend_in_known_free: false
+  frontend_in_known_free: false  # Allow planning through unknown space (stope interior starts unknown)
   goal_yaw_en: false
   goal_vel_en: false
 
@@ -102,7 +102,7 @@ astar:
 rog_map:
   resolution: 0.3
   inflation_resolution: 0.3
-  inflation_step: 2
+  inflation_step: 3              # 3 steps * 0.3m = 0.9m safety buffer around walls
   unk_inflation_en: false
   unk_inflation_step: 1
   map_size: [ 90, 170, 80 ]
@@ -110,7 +110,11 @@ rog_map:
   frontier_extraction_en: false
   virtual_ceil_height: 70
   virtual_ground_height: -1.0
-  load_pcd_en: false
+
+  # Load the real stope PCD directly as static obstacles
+  load_pcd_en: true
+  pcd_name: "${CMAKE_ROOT_DIR}/../mars_uav_sim/perfect_drone_sim/pcd/real_stope.pcd"
+
   map_sliding:
     enable: false
     threshold: 0.3
@@ -140,9 +144,9 @@ rog_map:
     local_update_box: [ 50, 80, 40 ]
     ray_range: [0.5, 60.0 ]
     p_min: 0.12
-    p_miss: 0.49
-    p_free: 0.499
+    p_miss: 0.4999             # Almost neutral — walls barely erode from miss events
+    p_free: 0.4999
     p_occ: 0.85
-    p_hit: 0.9
-    p_max: 0.98
+    p_hit: 0.99               # Strong occupied reinforcement from LiDAR hits
+    p_max: 0.999              # Higher ceiling so loaded walls are very resistant
     unk_thresh: 1.0
