@@ -261,6 +261,7 @@ void ProbMap::updateOccPointCloud(const PointCloud& input_cloud) {
     Vec3f localmap_min = local_map_bound_min_d_;
     Vec3f localmap_max = local_map_bound_max_d_;
     long long total_updates = 0;
+    long long skipped_points = 0;
     std::cout << "[ROG-Map] Thickening " << cloud_in_size << " points..." << std::endl;
 
     for (int i = 0; i < cloud_in_size; i++) {
@@ -299,9 +300,11 @@ void ProbMap::updateOccPointCloud(const PointCloud& input_cloud) {
             }
             localmap_max = localmap_max.cwiseMax(p);
             localmap_min = localmap_min.cwiseMin(p);
+        } else {
+            skipped_points++;
         }
     }
-    std::cout << "[ROG-Map] Thickening complete. Total updates queued: " << total_updates << std::endl;
+    std::cout << "[ROG-Map] Thickening complete. Total updates queued: " << total_updates << " Skipped points: " << skipped_points << std::endl;
     if(cfg_.map_sliding_en) {
         local_map_bound_max_d_ = localmap_max;
         local_map_bound_min_d_ = localmap_min;
