@@ -31,6 +31,7 @@ catkin_package(
 
 catkin_install_python(PROGRAMS
         scripts/interactive_goal_pub.py
+        scripts/exploration_manager.py
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

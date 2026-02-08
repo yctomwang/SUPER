@@ -1,0 +1,17 @@
+<launch>
+    <!-- Simulator -->
+    <node pkg="perfect_drone_sim" type="perfect_drone" name="perfect_drone" output="log">
+        <param name="config_name" value="real_stope.yaml" type="string"></param>
+    </node>
+
+    <!-- Planner -->
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="real_stope.yaml" type="string"></param>
+    </node>
+
+    <!-- Visualization -->
+    <node pkg="rviz" type="rviz" name="top_down" args="-d $(find perfect_drone_sim)/rviz/benchmark.rviz" output="log"/>
+
+    <!-- Autonomous Exploration Manager -->
+    <node pkg="mission_planner" name="exploration_manager" type="exploration_manager.py" output="screen"/>
+</launch>
