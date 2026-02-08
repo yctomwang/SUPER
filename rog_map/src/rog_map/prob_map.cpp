@@ -278,9 +278,20 @@ void ProbMap::updateOccPointCloud(const PointCloud& input_cloud) {
             continue;
         }
         if (insideLocalMap(pt_id_g)) {
-            const int occ_hit_num = ceil(cfg_.l_occ / cfg_.l_hit);
-            for (int j = 0; j < occ_hit_num; j++) {
-                insertUpdateCandidate(pt_id_g, true);
+            const int occ_hit_num = ceil(cfg_.l_occ / cfg_.l_hit) * 10; // Stronger reinforcement for static obstacles
+
+            // Thicken the point cloud to ensure walls are solid (3x3x3 block)
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        Vec3i neighbor_id = pt_id_g + Vec3i(dx, dy, dz);
+                        if (insideLocalMap(neighbor_id)) {
+                            for (int j = 0; j < occ_hit_num; j++) {
+                                insertUpdateCandidate(neighbor_id, true);
+                            }
+                        }
+                    }
+                }
             }
             localmap_max = localmap_max.cwiseMax(p);
             localmap_min = localmap_min.cwiseMin(p);
