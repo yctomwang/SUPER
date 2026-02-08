@@ -132,7 +132,7 @@ rog_map:
     use_dynamic_reconfigure: false
     time_rate: 1.0                # 1Hz update to reduce load
     frame_rate: 0
-    range: [ 50, 100, 80 ]        # Increased range to visualize entire stope
+    range: [ 150, 250, 100 ]      # Huge range to ensure walls are visible from center
     frame_id: "world"
     pub_unknown_map_en: false
   intensity_thresh: -10
