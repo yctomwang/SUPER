@@ -144,9 +144,9 @@ rog_map:
     local_update_box: [ 50, 80, 40 ]
     ray_range: [0.5, 60.0 ]
     p_min: 0.12
-    p_miss: 0.4999             # Almost neutral — walls barely erode from miss events
-    p_free: 0.4999
+    p_miss: 0.35               # Restored to normal clearing speed
+    p_free: 0.49
     p_occ: 0.85
-    p_hit: 0.99               # Strong occupied reinforcement from LiDAR hits
-    p_max: 0.999              # Higher ceiling so loaded walls are very resistant
+    p_hit: 0.99
+    p_max: 0.999
     unk_thresh: 1.0
