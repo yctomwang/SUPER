@@ -109,15 +109,29 @@ class ExplorationManager:
         best_goal = None
         
         for i, center in enumerate(candidates_pos):
+            # 1. Hard Constraints
+            if center[2] > 65.0: continue # Too high (near ceiling)
+            if center[2] < 1.0: continue  # Too low (floor)
+
             dist = np.linalg.norm(center - self.robot_pos)
             
             if dist < 2.0: 
                 # print(f"  Reject: Too close ({dist:.1f}m)")
                 continue 
             
-            # Score = Size * 1.0 - Distance * 0.5
-            # Add Z bonus? We prefer exploring horizontally first? No, let's keep it simple.
-            score = candidates_counts[i] * 1.0 - dist * 0.5
+            # 2. Score Calculation
+            # Preference: Large Clusters > Nearby > Horizontal
+            
+            # Calculate vertical distance
+            z_diff = abs(center[2] - self.robot_pos[2])
+            
+            # Penalize layer change (vertical jump > 5m)
+            layer_penalty = 0.0
+            if z_diff > 5.0:
+                layer_penalty = 20.0 
+            
+            # Score = Size * 1.0 - Distance * 0.5 - LayerPenalty
+            score = candidates_counts[i] * 1.0 - dist * 0.5 - layer_penalty
             
             if score > best_score:
                 best_score = score
