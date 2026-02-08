@@ -12,6 +12,6 @@
     </node>
 
     <node pkg="rviz" type="rviz" name="top_down"
-          args="-d $(find perfect_drone_sim)/rviz/stope.rviz"
+          args="-d $(find perfect_drone_sim)/rviz/benchmark.rviz"
           output="log"/>
 </launch>
