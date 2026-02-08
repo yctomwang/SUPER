@@ -18,6 +18,6 @@
 
     <!-- RViz visualization -->
     <node pkg="rviz" type="rviz" name="top_down"
-          args="-d $(find perfect_drone_sim)/rviz/benchmark.rviz"
+          args="-d $(find perfect_drone_sim)/rviz/stope.rviz"
           output="log"/>
 </launch>
