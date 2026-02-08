@@ -49,17 +49,17 @@ class ExplorationManager:
         if self.robot_pos is None:
             return
 
-        # Initial Nudge: If 10 seconds passed and no frontiers/goal, move UP
-        if not self.initial_nudge_done and (self.frontiers is None or len(self.frontiers) == 0):
-            if time.time() - self.start_time > 5.0:
-                print("[Exploration] No frontiers yet. Sending Initial Nudge (Up 5m).")
-                nudge_goal = self.robot_pos + np.array([0, 0, 5.0])
-                self.publish_goal(nudge_goal)
-                self.initial_nudge_done = True
-                return
-
+        # Initial Nudge Logic: Retry until frontiers appear
         if self.frontiers is None or len(self.frontiers) == 0:
-            # print("[Exploration] No frontiers detected yet.")
+            # If 5 seconds passed since start, try nudging
+            if time.time() - self.start_time > 5.0:
+                # If we haven't nudged recently (every 5s)
+                if time.time() - self.last_goal_time > 5.0:
+                    print("[Exploration] No frontiers yet. Sending Initial Nudge (Up 5m).")
+                    nudge_goal = self.robot_pos + np.array([0, 0, 5.0])
+                    self.publish_goal(nudge_goal)
+                    # Don't set initial_nudge_done flag to stop retrying, 
+                    # instead rely on frontiers appearing to break this loop.
             return
 
         # Check if we reached the goal or timed out
