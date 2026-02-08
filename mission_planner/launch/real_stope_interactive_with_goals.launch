@@ -1,0 +1,24 @@
+<launch>
+    <!-- Interactive mode WITH the interactive goal publisher terminal.
+         A terminal will open where you can type coordinates to send goals.
+    -->
+
+    <!-- Drone simulator with real stope point cloud -->
+    <node pkg="perfect_drone_sim" type="perfect_drone" name="perfect_drone" output="log">
+        <param name="config_name" value="real_stope.yaml" type="string"></param>
+    </node>
+
+    <!-- SUPER planner -->
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="real_stope.yaml" type="string"></param>
+    </node>
+
+    <!-- RViz visualization -->
+    <node pkg="rviz" type="rviz" name="top_down"
+          args="-d $(find perfect_drone_sim)/rviz/benchmark.rviz"
+          output="log"/>
+
+    <!-- Interactive goal publisher (runs in its own terminal) -->
+    <node pkg="mission_planner" type="interactive_goal_pub.py" name="interactive_goals"
+          output="screen" launch-prefix="xterm -e"/>
+</launch>

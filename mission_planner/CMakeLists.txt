@@ -29,6 +29,11 @@ catkin_package(
         #  DEPENDS system_lib
 )
 
+catkin_install_python(PROGRAMS
+        scripts/interactive_goal_pub.py
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 include_directories(
         SYSTEM
         include
