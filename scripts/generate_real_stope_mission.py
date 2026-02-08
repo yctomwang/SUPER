@@ -44,9 +44,8 @@ def generate_mission(filename):
     # Return to start area
     waypoints.append([0, 0, 3, 1])
 
-    # Write waypoints
+    # Write waypoints (NO count line - parser reads every line as a waypoint)
     with open(filename, 'w') as f:
-        f.write(f"{len(waypoints)}\n")
         for wp in waypoints:
             f.write(f"{wp[0]} {wp[1]} {wp[2]} {wp[3]}\n")
 
