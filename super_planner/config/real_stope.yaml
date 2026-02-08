@@ -130,9 +130,9 @@ rog_map:
   visualization:
     enable: true
     use_dynamic_reconfigure: false
-    time_rate: 2
+    time_rate: 1.0
     frame_rate: 0
-    range: [ 50, 80, 40 ]
+    range: [ 150, 250, 100 ]
     frame_id: "world"
     pub_unknown_map_en: false
   intensity_thresh: -10
