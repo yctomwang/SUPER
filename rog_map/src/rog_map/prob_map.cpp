@@ -282,15 +282,23 @@ void ProbMap::updateOccPointCloud(const PointCloud& input_cloud) {
             continue;
         }
         if (insideLocalMap(pt_id_g)) {
-            const int occ_hit_num = ceil(cfg_.l_occ / cfg_.l_hit) * 10; // Stronger reinforcement for static obstacles
+            // Strong hit for the center point
+            const int center_hit_num = ceil(cfg_.l_occ / cfg_.l_hit) * 10;
+            for (int j = 0; j < center_hit_num; j++) {
+                insertUpdateCandidate(pt_id_g, true);
+                total_updates++;
+            }
 
-            // Thicken the point cloud to ensure walls are solid (3x3x3 block)
+            // Thicken neighbors (3x3x3 block) with just enough hits to occupy
+            const int neighbor_hit_num = ceil(cfg_.l_occ / cfg_.l_hit) + 1; 
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
+                        if (dx == 0 && dy == 0 && dz == 0) continue; // Already did center
+
                         Vec3i neighbor_id = pt_id_g + Vec3i(dx, dy, dz);
                         if (insideLocalMap(neighbor_id)) {
-                            for (int j = 0; j < occ_hit_num; j++) {
+                            for (int j = 0; j < neighbor_hit_num; j++) {
                                 insertUpdateCandidate(neighbor_id, true);
                                 total_updates++;
                             }
@@ -567,15 +575,13 @@ void ProbMap::resetCell(const int& hash_id) {
 }
 
 void ProbMap::probabilisticMapFromCache() {
-    //    int addr = getHashIndexFromGlobalIndex(Vec3i(41,
-    //                                                 -216,
-    //                                                 -6));
-    //    float ret = occupancy_buffer_[addr];
-    //    std::cout << "ret: " << ret << std::endl;
+    long long processed_count = 0;
     while (!raycast_data_.update_cache_id_g.empty()) {
         Vec3f pos;
         Vec3i id_g = raycast_data_.update_cache_id_g.front();
         raycast_data_.update_cache_id_g.pop();
+        processed_count++;
+        // ... rest of loop
         Vec3i id_l;
         globalIndexToLocalIndex(id_g, id_l);
         int hash_id = getLocalIndexHash(id_l);
@@ -589,6 +595,9 @@ void ProbMap::probabilisticMapFromCache() {
         }
         raycast_data_.hit_cnt[hash_id] = 0;
         raycast_data_.operation_cnt[hash_id] = 0;
+    }
+    if (processed_count > 0) {
+        std::cout << "[ROG-Map] Processed " << processed_count << " cached updates." << std::endl;
     }
 }
 

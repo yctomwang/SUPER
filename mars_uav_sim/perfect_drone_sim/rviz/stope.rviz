@@ -102,8 +102,8 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.30000001192092896
+      Size (Pixels): 5
+      Size (m): 0.1
       Style: Points
       Topic: /rog_map/prob_map
       Use Fixed Frame: true
