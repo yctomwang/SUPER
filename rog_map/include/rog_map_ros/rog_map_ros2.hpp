@@ -297,11 +297,15 @@ namespace rog_map {
         void vecEVec3fToPC2(const vec_E<Vec3f>& points, sensor_msgs::msg::PointCloud2& cloud) {
             // 设置header信息
             pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
-            pcl_cloud.resize(points.size());
-            for (long unsigned int i = 0; i < points.size(); i++) {
-                pcl_cloud[i].x = static_cast<float>(points[i][0]);
-                pcl_cloud[i].y = static_cast<float>(points[i][1]);
-                pcl_cloud[i].z = static_cast<float>(points[i][2]);
+            // Downsample for visualization stability
+            int step = 10;
+            pcl_cloud.reserve(points.size() / step + 1);
+            for (long unsigned int i = 0; i < points.size(); i += step) {
+                pcl::PointXYZ p;
+                p.x = static_cast<float>(points[i][0]);
+                p.y = static_cast<float>(points[i][1]);
+                p.z = static_cast<float>(points[i][2]);
+                pcl_cloud.push_back(p);
             }
             pcl::toROSMsg(pcl_cloud, cloud);
             cloud.header.stamp = nh_->get_clock()->now();
