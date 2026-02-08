@@ -104,7 +104,7 @@ Visualization Manager:
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.30000001192092896
-      Style: Boxes
+      Style: Points
       Topic: /rog_map/prob_map
       Use Fixed Frame: true
       Use rainbow: true
