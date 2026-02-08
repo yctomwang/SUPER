@@ -16,16 +16,18 @@ class ExplorationManager:
         self.goal_pub = rospy.Publisher('/planning/click_goal', PoseStamped, queue_size=1)
         
         self.robot_pos = None
-        self.frontiers = []
+        self.frontiers = None
         self.current_goal = None
         self.last_goal_time = 0
-        self.stuck_timeout = 15.0 # Seconds to wait before giving up on a goal
-        self.reached_dist = 3.0   # Distance to consider goal reached
+        self.stuck_timeout = 20.0 # Seconds to wait before giving up on a goal
+        self.reached_dist = 2.0   # Distance to consider goal reached
+        self.initial_nudge_done = False
+        self.start_time = time.time()
         
         # Wait for connections
         time.sleep(1.0)
         
-        self.timer = rospy.Timer(rospy.Duration(2.0), self.control_loop)
+        self.timer = rospy.Timer(rospy.Duration(1.0), self.control_loop)
         
         print("[Exploration] Initialized. Waiting for frontiers...")
 
@@ -37,7 +39,6 @@ class ExplorationManager:
     def frontier_cb(self, msg):
         # Parse PointCloud2
         gen = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
-        # Convert to numpy array immediately
         pts = list(gen)
         if len(pts) > 0:
             self.frontiers = np.array(pts)
@@ -48,7 +49,16 @@ class ExplorationManager:
         if self.robot_pos is None:
             return
 
-        if len(self.frontiers) == 0:
+        # Initial Nudge: If 10 seconds passed and no frontiers/goal, move UP
+        if not self.initial_nudge_done and (self.frontiers is None or len(self.frontiers) == 0):
+            if time.time() - self.start_time > 5.0:
+                print("[Exploration] No frontiers yet. Sending Initial Nudge (Up 5m).")
+                nudge_goal = self.robot_pos + np.array([0, 0, 5.0])
+                self.publish_goal(nudge_goal)
+                self.initial_nudge_done = True
+                return
+
+        if self.frontiers is None or len(self.frontiers) == 0:
             # print("[Exploration] No frontiers detected yet.")
             return
 
@@ -56,12 +66,9 @@ class ExplorationManager:
         if self.current_goal is not None:
             dist = np.linalg.norm(self.robot_pos - self.current_goal)
             
-            # If closer than threshold, mark reached
             if dist < self.reached_dist:
-                print(f"[Exploration] Goal reached (dist {dist:.2f}m < {self.reached_dist}m). Picking new goal.")
+                print(f"[Exploration] Goal reached (dist {dist:.2f}m). Picking new goal.")
                 self.current_goal = None
-            
-            # If timed out
             elif time.time() - self.last_goal_time > self.stuck_timeout:
                  print(f"[Exploration] Goal timeout ({self.stuck_timeout}s). Picking new goal.")
                  self.current_goal = None
@@ -71,68 +78,56 @@ class ExplorationManager:
             self.select_next_goal()
 
     def select_next_goal(self):
-        if len(self.frontiers) == 0:
+        if self.frontiers is None or len(self.frontiers) == 0:
             return
 
-        # Strategy: Cluster frontiers to find significant unknown areas
-        # 1. Discretize frontiers to large voxels (e.g. 3m) to group them
+        print(f"[Exploration] Processing {len(self.frontiers)} frontier points...")
+
+        # 1. Discretize frontiers to large voxels (3m)
         resolution = 3.0
-        rounded = np.floor(self.frontiers / resolution) * resolution
+        # Use simple integer grid coordinates
+        grid_indices = np.floor(self.frontiers / resolution).astype(int)
         
         # 2. Count points in each voxel
-        # Use a structured array or convert to void view for np.unique on rows
-        # But for simplicity/speed with float arrays:
-        # We can map to string keys or just use lexical sort
+        unique_indices, counts = np.unique(grid_indices, axis=0, return_counts=True)
         
-        # Simple clustering:
-        # Find unique voxel centers and their counts
-        # This is a bit heavy if points are many, but frontier points usually aren't millions
-        
-        # Faster way: Lexicographical sort
-        # View as void
-        dtype = np.dtype((np.void, rounded.dtype.itemsize * rounded.shape[1]))
-        b = np.ascontiguousarray(rounded).view(dtype)
-        unique_b, counts = np.unique(b, return_counts=True)
-        unique_centers = unique_b.view(rounded.dtype).reshape(-1, rounded.shape[1])
-        
-        # Filter noise clusters (too few points)
-        min_points = 3
+        # 3. Filter noise
+        min_points = 5
         valid_mask = counts >= min_points
         
-        candidates = unique_centers[valid_mask]
-        candidate_counts = counts[valid_mask]
+        candidates_indices = unique_indices[valid_mask]
+        candidates_counts = counts[valid_mask]
         
-        if len(candidates) == 0:
-            print("[Exploration] Only small noise frontiers found.")
+        if len(candidates_indices) == 0:
+            print("[Exploration] Only small noise frontiers found (all < 5 points).")
             return
             
-        # Score candidates: 
-        # Score = Size * 1.0 - Distance * 0.5
-        # We want BIG clusters that are somewhat CLOSE
+        # Convert grid indices back to world coordinates (center of voxel)
+        candidates_pos = candidates_indices * resolution + resolution/2.0
         
         best_score = -float('inf')
         best_goal = None
         
-        for i, center in enumerate(candidates):
-            # Center of the voxel + half resolution to be in middle
-            goal_pt = center + resolution / 2.0
+        for i, center in enumerate(candidates_pos):
+            dist = np.linalg.norm(center - self.robot_pos)
             
-            dist = np.linalg.norm(goal_pt - self.robot_pos)
+            if dist < 2.0: 
+                # print(f"  Reject: Too close ({dist:.1f}m)")
+                continue 
             
-            if dist < 2.0: continue # Too close to be useful
-            
-            # Simple utility function
-            # Prefer larger clusters, penalize distance
-            score = candidate_counts[i] * 1.0 - dist * 0.5
+            # Score = Size * 1.0 - Distance * 0.5
+            # Add Z bonus? We prefer exploring horizontally first? No, let's keep it simple.
+            score = candidates_counts[i] * 1.0 - dist * 0.5
             
             if score > best_score:
                 best_score = score
-                best_goal = goal_pt
+                best_goal = center
 
         if best_goal is not None:
+            print(f"[Exploration] Selected goal with score {best_score:.1f} (Size: {candidates_counts[i]}, Dist: {dist:.1f}m)")
             self.publish_goal(best_goal)
         else:
-            print("[Exploration] No suitable goal found.")
+            print("[Exploration] No suitable goal found (all too close?).")
 
     def publish_goal(self, goal):
         msg = PoseStamped()
@@ -142,7 +137,6 @@ class ExplorationManager:
         msg.pose.position.y = goal[1]
         msg.pose.position.z = goal[2]
         
-        # Orient towards goal? Optional. Identity for now.
         msg.pose.orientation.w = 1.0
         
         self.goal_pub.publish(msg)
